@@ -1,32 +1,42 @@
 # Import python packages
 import streamlit as st
-# Write directly to the app
-st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw: ")
-st.write(
-  """Choose the fruits you want in custom Smoothie !
-  """
+from snowflake.snowpark.functions import col
+
+# App title
+st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw:")
+st.write("Choose the fruits you want in your custom Smoothie!")
+
+# Name input
+name_on_order = st.text_input('Name on Smoothie:')
+st.write('The name on your Smoothie will be', name_on_order)
+
+# Snowflake connection
+cnx = st.connection('snowflake')
+session = cnx.session()
+
+# Get fruit options
+fruit_df = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME')).collect()
+fruit_list = [row['FRUIT_NAME'] for row in fruit_df]
+
+# Multiselect
+ingredient_list = st.multiselect(
+    'Choose up to 5 ingredients:',
+    fruit_list,
+    max_selections=5
 )
 
-name_on_order=st.text_input('Name on Smoothie:')
-st.write('The name on your Smoothie will be',name_on_order)
+# Submit order
+if ingredient_list and name_on_order:
+    ingredients_string = ' '.join(ingredient_list)
 
-cnx=st.connection('snowflake')
-session=cnx.session()
-my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
+    if st.button('Submit Order'):
+        session.sql(
+            """
+            INSERT INTO smoothies.public.orders (ingredients, name_on_order)
+            VALUES (?, ?)
+            """,
+            params=[ingredients_string, name_on_order]
+        ).collect()
 
-ingredient_list=st.multiselect('Choose upto 5 ingredients:',my_dataframe,max_selections=5)
-if ingredient_list:
-    ingredients_string=''
-    
-    for fruit_chosen in ingredient_list:
-        ingredients_string += fruit_chosen + ' '
+        st.success(f'Your Smoothie is ordered, {name_on_order}!', icon="✅")
 
- 
-    my_insert_stmt = """ insert into smoothies.public.orders(ingredients,name_on_order)
-            values ('""" + ingredients_string +  """','""" + name_on_order +  """')"""
-
-  #st.write(my_insert_stmt)
-    time_to_insert=st.button('Sumbit Order')
-    if time_to_insert:
-     session.sql(my_insert_stmt).collect()
-     st.success('Your Smoothie is ordered,' + name_on_order + '!', icon="✅")
