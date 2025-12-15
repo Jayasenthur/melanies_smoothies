@@ -4,8 +4,6 @@ import snowflake.connector
 st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw:")
 st.write("Choose the fruits you want in your custom Smoothie!")
 
-st.write(st.secrets)
-
 name_on_order = st.text_input("Name on Smoothie:")
 
 # Snowflake connection using secrets
