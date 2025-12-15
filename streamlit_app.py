@@ -1,6 +1,5 @@
 # Import python packages
 import streamlit as st
-from snowflake.snowpark.functions import col
 
 # App title
 st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw:")
@@ -14,9 +13,15 @@ st.write('The name on your Smoothie will be', name_on_order)
 cnx = st.connection('snowflake')
 session = cnx.session()
 
-# Get fruit options
-fruit_df = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME')).collect()
-fruit_list = [row['FRUIT_NAME'] for row in fruit_df]
+# Get fruit options (NO snowpark.functions import)
+fruit_df = (
+    session
+    .table("smoothies.public.fruit_options")
+    .select("FRUIT_NAME")
+    .collect()
+)
+
+fruit_list = [row["FRUIT_NAME"] for row in fruit_df]
 
 # Multiselect
 ingredient_list = st.multiselect(
@@ -25,7 +30,7 @@ ingredient_list = st.multiselect(
     max_selections=5
 )
 
-# Submit order
+# Insert order
 if ingredient_list and name_on_order:
     ingredients_string = ' '.join(ingredient_list)
 
