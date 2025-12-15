@@ -1,47 +1,47 @@
-# Import python packages
 import streamlit as st
+import snowflake.connector
 
-# App title
 st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw:")
 st.write("Choose the fruits you want in your custom Smoothie!")
 
-# Name input
-name_on_order = st.text_input('Name on Smoothie:')
-st.write('The name on your Smoothie will be', name_on_order)
+name_on_order = st.text_input("Name on Smoothie:")
 
-# Snowflake connection
-cnx = st.connection('snowflake')
-session = cnx.session()
-
-# Get fruit options (NO snowpark.functions import)
-fruit_df = (
-    session
-    .table("smoothies.public.fruit_options")
-    .select("FRUIT_NAME")
-    .collect()
+# Snowflake connection using secrets
+conn = snowflake.connector.connect(
+    account=st.secrets["snowflake"]["account"],
+    user=st.secrets["snowflake"]["user"],
+    password=st.secrets["snowflake"]["password"],
+    warehouse=st.secrets["snowflake"]["warehouse"],
+    database=st.secrets["snowflake"]["database"],
+    schema=st.secrets["snowflake"]["schema"],
+    role=st.secrets["snowflake"]["role"],
 )
 
-fruit_list = [row["FRUIT_NAME"] for row in fruit_df]
+cur = conn.cursor()
 
-# Multiselect
+# Fetch fruit options
+cur.execute("SELECT FRUIT_NAME FROM FRUIT_OPTIONS")
+fruit_list = [row[0] for row in cur.fetchall()]
+
 ingredient_list = st.multiselect(
-    'Choose up to 5 ingredients:',
+    "Choose up to 5 ingredients:",
     fruit_list,
     max_selections=5
 )
 
-# Insert order
 if ingredient_list and name_on_order:
-    ingredients_string = ' '.join(ingredient_list)
+    ingredients_string = " ".join(ingredient_list)
 
-    if st.button('Submit Order'):
-        session.sql(
+    if st.button("Submit Order"):
+        cur.execute(
             """
-            INSERT INTO smoothies.public.orders (ingredients, name_on_order)
-            VALUES (?, ?)
+            INSERT INTO ORDERS (ingredients, name_on_order)
+            VALUES (%s, %s)
             """,
-            params=[ingredients_string, name_on_order]
-        ).collect()
+            (ingredients_string, name_on_order)
+        )
+        conn.commit()
+        st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
 
-        st.success(f'Your Smoothie is ordered, {name_on_order}!', icon="✅")
-
+cur.close()
+conn.close()
