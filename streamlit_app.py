@@ -1,5 +1,6 @@
 import streamlit as st
 import snowflake.connector
+import requests
 
 st.title(":cup_with_straw: Customize your Smoothie! :cup_with_straw:")
 st.write("Choose the fruits you want in your custom Smoothie!")
@@ -41,6 +42,9 @@ if ingredient_list and name_on_order:
             (ingredients_string, name_on_order)
         )
         conn.commit()
+smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
+# st.text(smoothiefroot_response.json())
+sf_dt=st.dataframe(data=smoothiefroot_response.json(),use_container_width=True)
         st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
 
 cur.close()
