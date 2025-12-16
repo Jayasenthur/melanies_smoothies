@@ -1,5 +1,6 @@
 streamlit
 snowflake-connector-python
 pandas
+requests
 
 
